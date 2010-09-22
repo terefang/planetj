@@ -1,4 +1,4 @@
-package planet;
+package planetj;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
