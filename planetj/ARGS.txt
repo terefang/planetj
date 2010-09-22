@@ -1,0 +1,113 @@
+-i
+--initial-altitude
+%f
+
+-v
+--altitude-weight
+%f
+
+-V
+--distance-weight
+%f
+
+-X
+--debug
+true|false
+
+-s
+--seed
+%f
+
+-w
+--width
+%i
+
+-h
+--height
+%i
+
+-m
+--magnification
+%f
+
+-o
+--out-file
+%s
+
+-a
+--alt-colors
+true|false
+
+-M
+--map-file
+%s
+
+-W
+--world-file
+%s
+
+-T
+--ter-file
+%s
+
+-l
+--longitude
+%f
+
+-L
+--latitude
+%f
+
+-g
+--vgrid
+%f
+
+-G
+--hgrid
+%f
+
+-c
+--latitude-colors
+true|false
+
+-E
+--edge
+true|false
+
+-O
+--outline
+true|false
+
+-C
+--lighter
+true|false
+
+-N
+--color-number
+%i
+
+-B
+--shade
+true|false
+
+-A
+--shade-angle
+%f
+
+-p
+--projection
+%c
+
+
+
+'m': /* Mercator projection */
+'p': /* Peters projection (area preserving cylindrical) */
+'q': /* Square projection (equidistant latitudes) */
+'M': /* Mollweide projection (area preserving) */
+'S': /* Sinusoid projection (area preserving) */
+'s': /* Stereographic projection */
+'o': /* Orthographic projection */
+'g': /* Gnomonic projection */
+'a': /* Area preserving azimuthal projection */
+'c': /* Conical projection (conformal) */
+
