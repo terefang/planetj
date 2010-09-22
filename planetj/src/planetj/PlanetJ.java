@@ -40,38 +40,6 @@ import javax.imageio.ImageIO;
 
 public class PlanetJ 
 {
-	public static void main(String[] args) 
-	{
-		Properties prop = new Properties();
-		prop.setProperty("-i", "-.015");
-		
-		prop.setProperty("-l", "180.0");
-		prop.setProperty("-L", "0.0");
-		
-		prop.setProperty("-m", "1.0");
-		prop.setProperty("-s", "0.6");
-		
-		prop.setProperty("-g", "0.0");
-		prop.setProperty("-G", "0.0");
-		
-		prop.setProperty("-p", "q");
-		prop.setProperty("-a", "true");
-
-		prop.setProperty("-w", "1024");
-		prop.setProperty("-h", "768");
-
-		PlanetJ planet = new PlanetJ();
-		
-		planet.init(prop);
-		
-		System.err.println("Processing ... ");
-		planet.process();
-		
-		System.err.println("Saving ... ");
-		planet.save("planet-map.gif");
-		System.err.println("Saved ... ");
-	}
-
 	public static int min(int x, int y)
 	{ 
 		return(x<y ? x : y); 
