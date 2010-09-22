@@ -38,7 +38,7 @@ import javax.imageio.ImageIO;
 /* can yield very different planets. */
 /* The primitive user interface is a result of portability concerns */
 
-public class Planet 
+public class PlanetJ 
 {
 	public static void main(String[] args) 
 	{
@@ -60,7 +60,7 @@ public class Planet
 		prop.setProperty("-w", "1024");
 		prop.setProperty("-h", "768");
 
-		Planet planet = new Planet();
+		PlanetJ planet = new PlanetJ();
 		
 		planet.init(prop);
 		
