@@ -1,5 +1,6 @@
 package planetj;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -36,7 +37,8 @@ public class Main
 		System.err.println("Saved ... ");
 	}
 	
-	static Properties procArgs(String[] args) {
+	static Properties procArgs(String[] args) throws Exception
+	{
 		Properties prop = new Properties();
 		Vector<String> left = new Vector();
 		
@@ -62,21 +64,17 @@ public class Main
 			}
 			else
 			{
-				left.add(args[i]);
+				prop.load(new FileInputStream(args[i]));
 			}
 		}
-		
-		if(left.size()>0)
-		{
-			prop.setProperty("-o", left.firstElement());
-		}
-		
+
 		return prop;
 	}
 
 	static Properties doRandom() throws Exception
 	{
-		String id = UUID.randomUUID().toString().toUpperCase();
+		double seed = new Random().nextDouble();
+		String id = "p_"+UUID.randomUUID().toString().toUpperCase();
 		
 		Properties prop = new Properties();
 		prop.setProperty("-i", "-.015");
@@ -85,7 +83,7 @@ public class Main
 		prop.setProperty("-L", "0.0");
 		
 		prop.setProperty("-m", "1.0");
-		prop.setProperty("-s", Double.toString(new Random().nextDouble()));
+		prop.setProperty("-s", Double.toString(seed));
 		
 		prop.setProperty("-g", "30.0");
 		prop.setProperty("-G", "30.0");
