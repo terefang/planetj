@@ -242,7 +242,7 @@ public class PlanetJ
 		
 		scale = Double.parseDouble(prop.getProperty("-m", prop.getProperty("magnification", "1.0")));
 
-		filename = prop.getProperty("-o", prop.getProperty("out-file", "planet-map.jpg"));
+		filename = prop.getProperty("-o", prop.getProperty("out-file", "false"));
 
 		altColors = Boolean.parseBoolean(prop.getProperty("-a", prop.getProperty("alt-colors", "false")));
 		
@@ -1565,6 +1565,22 @@ public class PlanetJ
 					j < min(Height,Height/2+(int)(0.25*PI*Width*scale/PI)+k); j++)
 						col[i][j] = BLACK;
 			}
+		}
+	}
+
+	public void save() 
+	{
+		if(!filename.equals("false"))
+		{
+			save(filename);
+		}
+		if(!world_file.equals("false"))
+		{
+			saveWLD(world_file);
+		}
+		if(!ter_file.equals("false"))
+		{
+			saveTERRAGEN(ter_file);
 		}
 	}
 		

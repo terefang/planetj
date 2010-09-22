@@ -6,21 +6,75 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
+import java.util.Vector;
 
-public class Main {
+public class Main 
+{
 
-	/**
-	 * @param args
-	 */
 	public static void main(String[] args) throws Exception 
 	{
+		Properties prop;
+		
 		if(args.length==0)
 		{
-			doRandom();
+			prop = doRandom();
 		}
+		else
+		{
+			prop = procArgs(args);
+		}
+
+		PlanetJ planet = new PlanetJ();
+		
+		planet.init(prop);
+		
+		System.err.println("Processing ... ");
+		planet.process();
+		
+		System.err.println("Saving ... ");
+		planet.save();
+		System.err.println("Saved ... ");
 	}
 	
-	public static void doRandom() throws Exception
+	static Properties procArgs(String[] args) {
+		Properties prop = new Properties();
+		Vector<String> left = new Vector();
+		
+		for(int i=0; i<args.length; i++)
+		{
+			if(args[i].startsWith("--") && args[i].indexOf('=')>0)
+			{
+				prop.setProperty(args[i].substring(2, args[i].indexOf('=')), args[i].substring(args[i].indexOf('=')+1));
+			}
+			else if(args[i].startsWith("--"))
+			{
+				prop.setProperty(args[i].substring(2), args[i+1]);
+				i++;
+			}
+			else if(args[i].startsWith("-") && args[i].length()==2)
+			{
+				prop.setProperty(args[i], args[i+1]);
+				i++;
+			}
+			else if(args[i].startsWith("-") && args[i].length()>2)
+			{
+				prop.setProperty(args[i].substring(0,2), args[i].substring(2));
+			}
+			else
+			{
+				left.add(args[i]);
+			}
+		}
+		
+		if(left.size()>0)
+		{
+			prop.setProperty("-o", left.firstElement());
+		}
+		
+		return prop;
+	}
+
+	static Properties doRandom() throws Exception
 	{
 		String id = UUID.randomUUID().toString().toUpperCase();
 		
@@ -42,17 +96,10 @@ public class Main {
 		prop.setProperty("-w", "1024");
 		prop.setProperty("-h", "512");
 
-		PlanetJ planet = new PlanetJ();
-		
-		planet.init(prop);
-		
-		System.err.println("Processing ... ");
-		planet.process();
-		
-		System.err.println("Saving ... ");
-		planet.save(id+".gif");
-		System.err.println("Saved ... ");
-		prop.store(new FileOutputStream(id+".prop"), "planetj properties "+id);
-	}
+		prop.setProperty("-o", id+".gif");
 
+		prop.store(new FileOutputStream(id+".prop"), "planetj properties "+id);
+		
+		return prop;
+	}
 }
