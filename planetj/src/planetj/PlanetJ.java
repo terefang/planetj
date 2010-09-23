@@ -65,6 +65,7 @@ public class PlanetJ implements IPlanet
 	public void save(String f)
 	{
 		BufferedImage bufferedImage = new BufferedImage(Width, Height, BufferedImage.TYPE_INT_RGB);
+
 		for(int ix=0; ix<Width; ix++)
 		{
 			for(int iy=0; iy<Height; iy++)
