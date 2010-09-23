@@ -38,7 +38,7 @@ import javax.imageio.ImageIO;
 /* can yield very different planets. */
 /* The primitive user interface is a result of portability concerns */
 
-public class PlanetJ 
+public class PlanetJ implements IPlanet
 {
 	public static int min(int x, int y)
 	{ 
@@ -217,12 +217,12 @@ public class PlanetJ
 
 	public int best = 500000;
 	public int weight[]= new int[30];
-	private String filename;
-	private String colorsname;
+	public String filename;
+	public String colorsname;
 
-	private String world_file;
+	public String world_file;
 
-	private String ter_file;
+	public String ter_file;
 
 	public void init(Properties prop)
 	{
@@ -246,15 +246,6 @@ public class PlanetJ
 
 		altColors = Boolean.parseBoolean(prop.getProperty("-a", prop.getProperty("alt-colors", "false")));
 		
-		if(altColors)
-		{ 
-			copyColors(alt_colors);
-		}
-		else
-		{
-			copyColors(std_colors);
-		}
-
 		colorsname = prop.getProperty("-M", prop.getProperty("map-file", "false"));
 		world_file = prop.getProperty("-W", prop.getProperty("world-file", "false"));
 		ter_file = prop.getProperty("-T", prop.getProperty("ter-file", "false"));
@@ -295,6 +286,19 @@ public class PlanetJ
 		shade_angle = Double.parseDouble(prop.getProperty("-A", prop.getProperty("shade-angle", "150.0")));
 
 		view = prop.getProperty("-p", prop.getProperty("projection", "mercator")).charAt(0);
+	
+	}
+	
+	public void setup()
+	{
+		if(altColors)
+		{ 
+			copyColors(alt_colors);
+		}
+		else
+		{
+			copyColors(std_colors);
+		}
 		
 		if (longi>180) longi -= 360;
 		
