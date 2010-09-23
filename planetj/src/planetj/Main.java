@@ -12,6 +12,8 @@ import java.util.Vector;
 public class Main 
 {
 
+	public static boolean use_2k9 = false;
+	
 	public static void main(String[] args) throws Exception 
 	{
 		Properties prop;
@@ -25,11 +27,21 @@ public class Main
 			prop = procArgs(args);
 		}
 
-		PlanetJ planet = new PlanetJ();
+		IPlanet planet;
+		if(prop.containsKey("-Y") && prop.getProperty("-Y").equalsIgnoreCase("2k9"))
+		{
+			planet = new PlanetJ2k9();
+		}
+		else
+		{
+			planet = new PlanetJ();
+		}
+		
 		
 		planet.init(prop);
 		
 		System.err.println("Processing ... ");
+		planet.setup();
 		planet.process();
 		
 		System.err.println("Saving ... ");
