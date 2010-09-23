@@ -27,16 +27,7 @@ public class Main
 			prop = procArgs(args);
 		}
 
-		IPlanet planet;
-		if(prop.containsKey("-Y") && prop.getProperty("-Y").equalsIgnoreCase("2k9"))
-		{
-			planet = new PlanetJ2k9();
-		}
-		else
-		{
-			planet = new PlanetJ();
-		}
-		
+		IPlanet planet = new PlanetJ();
 		
 		planet.init(prop);
 		
