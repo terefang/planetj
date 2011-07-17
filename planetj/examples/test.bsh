@@ -1,0 +1,27 @@
+import planetj.PlanetJ;
+
+planet = new PlanetJ();
+planet.init();
+planet.setScale(1.0);
+planet.setWidth(512);
+planet.setHeight(512);
+planet.setBaseLongitude(180);
+planet.setBaseLatitude(45);
+planet.setSeed(0.6);
+planet.setFilename("test.png");
+planet.setHgrid(30.0);
+planet.setVgrid(30.0);
+planet.setView('s');
+planet.setDoshade(true);
+planet.setUseAlternativeColors(true);
+planet.setLatitudeColors(true);
+planet.setShadeAngle(150.0);
+
+System.err.println("Processing ... ");
+planet.setup();
+planet.process();
+		
+System.err.println("Saving ... ");
+planet.save();
+System.err.println("Saved ... ");
+

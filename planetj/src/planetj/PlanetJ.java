@@ -62,7 +62,7 @@ public class PlanetJ implements IPlanet
 		return(Math.log(x)/Math.log(2.0)); 
 	}
 
-	public void save(String f)
+	public BufferedImage makeRgbImage()
 	{
 		BufferedImage bufferedImage = new BufferedImage(Width, Height, BufferedImage.TYPE_INT_RGB);
 
@@ -84,6 +84,13 @@ public class PlanetJ implements IPlanet
 				bufferedImage.getRaster().setPixel(ix, iy, c);
 			}
 		}
+		
+		return bufferedImage;
+	}
+	
+	public void save(String f)
+	{
+		BufferedImage bufferedImage = makeRgbImage();
 		
 		String image_type = "jpg";
 		if(f.toLowerCase().endsWith(".jpg") || f.toLowerCase().endsWith(".jpeg"))
@@ -170,26 +177,28 @@ public class PlanetJ implements IPlanet
 		0.4682040106, 0.5309726991, 0.5920417499,
 		0.6511575166, 0.7080428038, 0.7623860881,
 		0.8138239166, 0.8619100185, 0.9060553621,
-		0.9453925506, 0.9783738403, 1.0};
+		0.9453925506, 0.9783738403, 1.0, 1.0};
 
 
 	/* these values can be changed to change world characteristica */
 
-	//public static double M  = -.02;   /* initial altitude (slightly below sea level) */
-	public double M  = -.01;   /* initial altitude (slightly below sea level) */
-	public double dd1 = 0.4;   /* weight for altitude difference */
-	public double dd2 = 0.03;  /* weight for distance */
+	//public static double initialAltitude  = -.02;   /* initial altitude (slightly below sea level) */
+	public double initialAltitude  = -.01;   /* initial altitude (slightly below sea level) */
+	public double altitudeWeight = 0.4;   /* weight for altitude difference */
+	public double distanceWeight = 0.03;  /* weight for distance */
 	public boolean debug;
-	public boolean altColors;
-	public double longi,lat,scale;
+	public boolean useAlternativeColors;
+	public double baseLongitude,baseLatitude,scale;
 	public double vgrid, hgrid;
 	public char view;
 	public int nocols = 256;
 	public int lighter = 0; /* specifies lighter colours */
-	public boolean latic; /* flag for latitude based colour */
+	public boolean latitudeColors; /* flag for latitude based colour */
 	public boolean do_outline;
 	public boolean do_bw;
 	public boolean doshade;
+	public boolean doWaterShade;
+	public int waterShade = 128;
 	public int Depth; /* depth of subdivisions */
 	public double r1,r2,r3,r4; /* seeds */
 	public double cla, sla, clo, slo;
@@ -203,7 +212,7 @@ public class PlanetJ implements IPlanet
 
 	public int shade;
 	public int shades[][];
-	public double shade_angle = 150.0; /* angle of "light" on bumpmap */
+	public double shadeAngle = 150.0; /* angle of "light" on bumpmap */
 	public double rseed, increment = 0.00000001;	
 
 	public int BLUE1, LAND0, LAND1, LAND2, LAND4;
@@ -225,13 +234,18 @@ public class PlanetJ implements IPlanet
 
 	public String ter_file;
 
+	public void init()
+	{
+		init(new Properties());
+	}
+	
 	public void init(Properties prop)
 	{
-		M   = Double.parseDouble(prop.getProperty("-i", prop.getProperty("initial-altitude", "-.015")));
+		initialAltitude   = Double.parseDouble(prop.getProperty("-i", prop.getProperty("initial-altitude", "-.015")));
 		
-		dd1 = Double.parseDouble(prop.getProperty("-v", prop.getProperty("altitude-weight",  "0.4")));
+		altitudeWeight = Double.parseDouble(prop.getProperty("-v", prop.getProperty("altitude-weight",  "0.4")));
 		
-		dd2 = Double.parseDouble(prop.getProperty("-V", prop.getProperty("distance-weight",  "0.03")));
+		distanceWeight = Double.parseDouble(prop.getProperty("-V", prop.getProperty("distance-weight",  "0.03")));
 
 		debug = Boolean.parseBoolean(prop.getProperty("-X", prop.getProperty("debug", "false")));
 		
@@ -245,21 +259,21 @@ public class PlanetJ implements IPlanet
 
 		filename = prop.getProperty("-o", prop.getProperty("out-file", "false"));
 
-		altColors = Boolean.parseBoolean(prop.getProperty("-a", prop.getProperty("alt-colors", "false")));
+		useAlternativeColors = Boolean.parseBoolean(prop.getProperty("-a", prop.getProperty("alt-colors", "false")));
 		
-		colorsname = prop.getProperty("-M", prop.getProperty("map-file", "false"));
+		colorsname = prop.getProperty("-initialAltitude", prop.getProperty("map-file", "false"));
 		world_file = prop.getProperty("-W", prop.getProperty("world-file", "false"));
 		ter_file = prop.getProperty("-T", prop.getProperty("ter-file", "false"));
 		
-		longi = Double.parseDouble(prop.getProperty("-l", prop.getProperty("longitude", "0.0")));
+		baseLongitude = Double.parseDouble(prop.getProperty("-l", prop.getProperty("longitude", "0.0")));
 
-		lat = Double.parseDouble(prop.getProperty("-L", prop.getProperty("latitude", "0.0")));
+		baseLatitude = Double.parseDouble(prop.getProperty("-L", prop.getProperty("latitude", "0.0")));
 
 		vgrid = Double.parseDouble(prop.getProperty("-g", prop.getProperty("vgrid", "0.0")));
 
 		hgrid = Double.parseDouble(prop.getProperty("-G", prop.getProperty("hgrid", "0.0")));
 
-		latic = Boolean.parseBoolean(prop.getProperty("-c", prop.getProperty("latitude-colors", "false")));
+		latitudeColors = Boolean.parseBoolean(prop.getProperty("-c", prop.getProperty("latitude-colors", "false")));
 		
 		if(Boolean.parseBoolean(prop.getProperty("-E", prop.getProperty("edge", "false"))))
 		{
@@ -284,7 +298,7 @@ public class PlanetJ implements IPlanet
 		
 		doshade = Boolean.parseBoolean(prop.getProperty("-B", prop.getProperty("shade", "false")));
 		
-		shade_angle = Double.parseDouble(prop.getProperty("-A", prop.getProperty("shade-angle", "150.0")));
+		shadeAngle = Double.parseDouble(prop.getProperty("-A", prop.getProperty("shade-angle", "150.0")));
 
 		view = prop.getProperty("-p", prop.getProperty("projection", "mercator")).charAt(0);
 	
@@ -292,7 +306,7 @@ public class PlanetJ implements IPlanet
 	
 	public void setup()
 	{
-		if(altColors)
+		if(useAlternativeColors)
 		{ 
 			copyColors(alt_colors);
 		}
@@ -301,15 +315,15 @@ public class PlanetJ implements IPlanet
 			copyColors(std_colors);
 		}
 		
-		if (longi>180) longi -= 360;
+		if (baseLongitude>180) baseLongitude -= 360;
 		
-		longi = longi*DEG2RAD;
-		lat = lat*DEG2RAD;
+		baseLongitude = baseLongitude*DEG2RAD;
+		baseLatitude = baseLatitude*DEG2RAD;
 
-		sla = Math.sin(lat); 
-		cla = Math.cos(lat);
-		slo = Math.sin(longi); 
-		clo = Math.cos(longi);
+		sla = Math.sin(baseLatitude); 
+		cla = Math.cos(baseLatitude);
+		slo = Math.sin(baseLongitude); 
+		clo = Math.cos(baseLongitude);
 
 		heights = new int[Width][];
 		col = new int[Width][];
@@ -323,10 +337,10 @@ public class PlanetJ implements IPlanet
 
 
 		if (view == 'c') {
-			if (lat == 0.0) view = 'm';
-			/* Conical approaches mercator when lat -> 0 */
-			if (Math.abs(lat) >= PI - 0.000001) view = 's';
-			/* Conical approaches stereo when lat -> +/- 90 */
+			if (baseLatitude == 0.0) view = 'm';
+			/* Conical approaches mercator when baseLatitude -> 0 */
+			if (Math.abs(baseLatitude) >= PI - 0.000001) view = 's';
+			/* Conical approaches stereo when baseLatitude -> +/- 90 */
 		}
 
 		setcolours();
@@ -444,7 +458,7 @@ public class PlanetJ implements IPlanet
 	{
 		int i;
 
-		if (altColors) {
+		if (useAlternativeColors) {
 			int	    crow;
 
 			if (nocols < 8)
@@ -576,13 +590,13 @@ public class PlanetJ implements IPlanet
 	{
 		int colour;
 
-		if (altColors)
+		if (useAlternativeColors)
 		{
 			double snow = .125;
 			double tree = snow * 0.5;
 			double bare = (tree + snow) / 2.;
 
-			if (latic) {
+			if (latitudeColors) {
 				snow -= (.13 * (y*y*y*y*y*y));
 				bare -= (.12 * (y*y*y*y*y*y));
 				tree -= (.11 * (y*y*y*y*y*y));
@@ -620,7 +634,7 @@ public class PlanetJ implements IPlanet
 		} else {
 			/* calculate colour */
 			if (alt <=0.) { /* if below sea level then */
-				if (latic && y*y+alt >= 0.98)
+				if (latitudeColors && y*y+alt >= 0.98)
 					colour = LAND4;	 /* white if close to poles */
 				else {
 					colour = BLUE1+(int)((BLUE1-BLUE0+1)*(10*alt));	  /* blue scale otherwise */
@@ -628,7 +642,7 @@ public class PlanetJ implements IPlanet
 				}
 			}
 			else {
-				if (latic) alt += 0.10204*y*y;  /* altitude adjusted with latitude */
+				if (latitudeColors) alt += 0.10204*y*y;  /* altitude adjusted with latitude */
 				if (alt >= 0.1) /* if high then */
 					colour = LAND4;
 				else {
@@ -686,8 +700,8 @@ public class PlanetJ implements IPlanet
 				}
 			}
 		} /* otherwise */
-		return(planet(M,M,M,M,
-				/* initial altitude is M on all corners of tetrahedron */
+		return(planet(initialAltitude,initialAltitude,initialAltitude,initialAltitude,
+				/* initial altitude is initialAltitude on all corners of tetrahedron */
 				r1,r2,r3,r4,
 				/* same seed set is used in every call */
 				0.0, 0.0, 3.01,
@@ -767,7 +781,7 @@ public class PlanetJ implements IPlanet
 								ex = 0.5*(ax+bx); ey = 0.5*(ay+by); ez = 0.5*(az+bz);
 								es = rand2(as,bs);
 								if (lab>1.0) lab = Math.pow(lab,0.75);
-								e = 0.5*(a+b)+es*(dd1*Math.abs(a-b)+dd2*Math.pow(lab,0.45));
+								e = 0.5*(a+b)+es*(altitudeWeight*Math.abs(a-b)+distanceWeight*Math.pow(lab,0.45));
 								eax = ax-ex; eay = ay-ey; eaz = az-ez;
 								epx = x-ex; epy = y-ey; epz = z-ez;
 								ecx = cx-ex; ecy = cy-ey; ecz = cz-ez;
@@ -805,8 +819,9 @@ public class PlanetJ implements IPlanet
 				y2 = -x*y/tmp*x1+tmp*y1-z*y/tmp*z1;
 				z2 = -z/tmp*x1+x/tmp*z1;
 				shade =
-					(int)((-Math.sin(PI*shade_angle/180.0)*y2-Math.cos(PI*shade_angle/180.0)*z2)
+					(int)((-Math.sin(PI*shadeAngle/180.0)*y2-Math.cos(PI*shadeAngle/180.0)*z2)
 							/l1*48.0+128.0);
+				shade = (int)((shade - 128)/1.5)+128;
 				if (shade<10) shade = 10;
 				if (shade>255) shade = 255;
 			}
@@ -837,7 +852,7 @@ public class PlanetJ implements IPlanet
 		double y,scale1,cos2,theta1;
 		int i,j,k;
 
-		y = Math.sin(lat);
+		y = Math.sin(baseLatitude);
 		y = (1.0+y)/(1.0-y);
 		y = 0.5*Math.log(y);
 		k = (int)(0.5*y*Width*scale/PI);
@@ -851,11 +866,18 @@ public class PlanetJ implements IPlanet
 			Depth = 3*((int)(log_2(scale1*Height)))+3;
 			for (i = 0; i < Width ; i++) 
 			{
-				theta1 = longi-0.5*PI+PI*(2.0*i-Width)/Width/scale;
+				theta1 = baseLongitude-0.5*PI+PI*(2.0*i-Width)/Width/scale;
 				double alt = planet1(Math.cos(theta1)*cos2,y,-Math.sin(theta1)*cos2);
 				col[i][j] = alt2color(alt, Math.cos(theta1)*cos2,y,-Math.sin(theta1)*cos2); 
 				heights[i][j] = (int) alt; 
-				if (doshade) shades[i][j] = shade;
+				if(!doWaterShade && alt<=0.0)
+				{
+					shades[i][j] = waterShade; 
+				}
+				else if(doshade)
+				{
+					shades[i][j] = shade; 
+				}
 			}
 			tickH(j);
 		}
@@ -872,7 +894,7 @@ public class PlanetJ implements IPlanet
 		if (vgrid != 0.0) { /* draw vertical gridlines */
 			for (theta1 = 0.0; theta1>-360.0; theta1-=vgrid);
 			for (theta1 = theta1; theta1<360.0; theta1+=vgrid) {
-				i = (int)(0.5*Width*(1.0+scale*(DEG2RAD*theta1-longi)/PI));
+				i = (int)(0.5*Width*(1.0+scale*(DEG2RAD*theta1-baseLongitude)/PI));
 				if (i>=0 && i<Width) for (j = 0; j < Height; j++) col[i][j] = BLACK;
 			} 
 		}
@@ -883,7 +905,7 @@ public class PlanetJ implements IPlanet
 		double y,cos2,theta1,scale1;
 		int k,i,j,water,land;
 
-		y = 2.0*Math.sin(lat);
+		y = 2.0*Math.sin(baseLatitude);
 		k = (int)(0.5*y*Width*scale/PI);
 		water = land = 0;
 		for (j = 0; j < Height; j++) {
@@ -899,11 +921,18 @@ public class PlanetJ implements IPlanet
 					scale1 = scale*Width/Height/cos2/PI;
 					Depth = 3*((int)(log_2(scale1*Height)))+3;
 					for (i = 0; i < Width ; i++) {
-						theta1 = longi-0.5*PI+PI*(2.0*i-Width)/Width/scale;
+						theta1 = baseLongitude-0.5*PI+PI*(2.0*i-Width)/Width/scale;
 						double alt = planet1(Math.cos(theta1)*cos2,y,-Math.sin(theta1)*cos2);
 						col[i][j] = alt2color(alt, Math.cos(theta1)*cos2,y,-Math.sin(theta1)*cos2);
 						heights[i][j] = (int) alt; 
-						if (doshade) shades[i][j] = shade;
+						if(!doWaterShade && alt<=0.0)
+						{
+							shades[i][j] = waterShade; 
+						}
+						else if(doshade)
+						{
+							shades[i][j] = shade; 
+						}
 						if (col[i][j] < LAND0) water++; else land++;
 					}
 				}
@@ -921,7 +950,7 @@ public class PlanetJ implements IPlanet
 		if (vgrid != 0.0) { /* draw vertical gridlines */
 			for (theta1 = 0.0; theta1>-360.0; theta1-=vgrid);
 			for (theta1 = theta1; theta1<360.0; theta1+=vgrid) {
-				i = (int)(0.5*Width*(1.0+scale*(DEG2RAD*theta1-longi)/PI));
+				i = (int)(0.5*Width*(1.0+scale*(DEG2RAD*theta1-baseLongitude)/PI));
 				if (i>=0 && i<Width)
 					for (j = max(0,Height/2-(int)(Width*scale/PI)+k);
 					j < min(Height,Height/2+(int)(Width*scale/PI)+k); j++)
@@ -953,11 +982,18 @@ public class PlanetJ implements IPlanet
 							col[i][j] = BACK;
 							if (doshade) shades[i][j] = 255;
 						} else {
-							theta1 += longi-0.5*PI;
+							theta1 += baseLongitude-0.5*PI;
 							double alt = planet1(Math.cos(theta1)*cos2,y,-Math.sin(theta1)*cos2);
 							col[i][j] = alt2color(alt, Math.cos(theta1)*cos2,y,-Math.sin(theta1)*cos2);
 							heights[i][j] = (int)alt;
-							if (doshade) shades[i][j] = shade;
+							if(!doWaterShade && alt<=0.0)
+							{
+								shades[i][j] = waterShade; 
+							}
+							else if(doshade)
+							{
+								shades[i][j] = shade; 
+							}
 						}
 					}
 				}
@@ -982,9 +1018,9 @@ public class PlanetJ implements IPlanet
 		if (vgrid != 0.0) { /* draw vertical gridlines */
 			for (theta1 = 0.0; theta1>-360.0; theta1-=vgrid);
 			for (theta1 = theta1; theta1<360.0; theta1+=vgrid) {
-				if (DEG2RAD*theta1-longi+0.5*PI>-PI &&
-				DEG2RAD*theta1-longi+0.5*PI<=PI) {
-					x = 0.5*(DEG2RAD*theta1-longi+0.5*PI)*Width*scale/PI;
+				if (DEG2RAD*theta1-baseLongitude+0.5*PI>-PI &&
+				DEG2RAD*theta1-baseLongitude+0.5*PI<=PI) {
+					x = 0.5*(DEG2RAD*theta1-baseLongitude+0.5*PI)*Width*scale/PI;
 					j = max(0,Height/2-(int)(0.25*Width*scale));
 					y = 2*(2.0*j-Height)/Width/scale;
 					i = (int) (Width/2.0+x*Math.sqrt(1.0-y*y));
@@ -1017,7 +1053,7 @@ public class PlanetJ implements IPlanet
 		double y,theta1,theta2,cos2,l1,i1,scale1;
 		int k,i,j,l,c;
 
-		k = (int)(lat*Width*scale/PI);
+		k = (int)(baseLatitude*Width*scale/PI);
 		for (j = 0; j < Height; j++) {
 			y = (2.0*(j-k)-Height)/Width/scale*PI;
 			if (Math.abs(y)>=0.5*PI) for (i = 0; i < Width ; i++) {
@@ -1032,7 +1068,7 @@ public class PlanetJ implements IPlanet
 						l = i*12/Width;
 						l1 = l*Width/12.0;
 						i1 = i-l1;
-						theta2 = longi-0.5*PI+PI*(2.0*l1-Width)/Width/scale;
+						theta2 = baseLongitude-0.5*PI+PI*(2.0*l1-Width)/Width/scale;
 						theta1 = (PI*(2.0*i1-Width/12)/Width/scale)/cos2;
 						if (Math.abs(theta1)>PI/12.0) 
 						{
@@ -1046,7 +1082,14 @@ public class PlanetJ implements IPlanet
 							col[i][j] = alt2color(alt, Math.cos(theta1+theta2)*cos2,Math.sin(y),
 									-Math.sin(theta1+theta2)*cos2);
 							heights[i][j] = (int)alt;
-							if (doshade) shades[i][j] = shade;
+							if(!doWaterShade && alt<=0.0)
+							{
+								shades[i][j] = waterShade; 
+							}
+							else if(doshade)
+							{
+								shades[i][j] = shade; 
+							}
 						}
 					}
 				}
@@ -1072,7 +1115,7 @@ public class PlanetJ implements IPlanet
 		if (vgrid != 0.0) { /* draw vertical gridlines */
 			for (theta1 = 0.0; theta1>-360.0; theta1-=vgrid);
 			for (; theta1<360.0; theta1+=vgrid) {
-				i = (int)(0.5*Width*(1.0+scale*(DEG2RAD*theta1-longi)/PI));
+				i = (int)(0.5*Width*(1.0+scale*(DEG2RAD*theta1-baseLongitude)/PI));
 				if (i>=0 && i<Width)
 					for (j = max(0,Height/2-(int)(0.25*PI*Width*scale/PI)+k);
 					j < min(Height,Height/2+(int)(0.25*PI*Width*scale/PI)+k); j++) {
@@ -1112,7 +1155,14 @@ public class PlanetJ implements IPlanet
 				double alt = planet1(x1,y1,z1);
 				col[i][j] = alt2color(alt, x1,y1,z1);
 				heights[i][j] = (int)alt;
-				if (doshade) shades[i][j] = shade;
+				if(!doWaterShade && alt<=0.0)
+				{
+					shades[i][j] = waterShade; 
+				}
+				else if(doshade)
+				{
+					shades[i][j] = shade; 
+				}
 			}
 			tickH(j);
 		}
@@ -1184,7 +1234,14 @@ public class PlanetJ implements IPlanet
 					double alt = planet1(x1,y1,z1);
 					col[i][j] = alt2color(alt, x1,y1,z1);
 					heights[i][j] = (int)alt;
-					if (doshade) shades[i][j] = shade;
+					if(!doWaterShade && alt<=0.0)
+					{
+						shades[i][j] = waterShade; 
+					}
+					else if(doshade)
+					{
+						shades[i][j] = shade; 
+					}
 				}
 			}
 			tickH(j);
@@ -1254,7 +1311,14 @@ public class PlanetJ implements IPlanet
 				double alt = planet1(x1,y1,z1);
 				col[i][j] = alt2color(alt, x1,y1,z1);
 				heights[i][j] = (int)alt;
-				if (doshade) shades[i][j] = shade;
+				if(!doWaterShade && alt<=0.0)
+				{
+					shades[i][j] = waterShade; 
+				}
+				else if(doshade)
+				{
+					shades[i][j] = shade; 
+				}
 			}
 			tickH(j);
 		}
@@ -1328,7 +1392,14 @@ public class PlanetJ implements IPlanet
 					double alt = planet1(x1,y1,z1);
 					col[i][j] = alt2color(alt, x1,y1,z1);
 					heights[i][j] = (int)alt;
-					if (doshade) shades[i][j] = shade;
+					if(!doWaterShade && alt<=0.0)
+					{
+						shades[i][j] = waterShade;
+					}
+					else if(doshade) 
+					{
+						shades[i][j] = shade;
+					}
 				}
 			}
 			tickH(j);
@@ -1382,10 +1453,10 @@ public class PlanetJ implements IPlanet
 
 		ymin = 2.0;
 		ymax = -2.0;
-		if (lat>0) {
-			k1 = 1.0/Math.sin(lat);
+		if (baseLatitude>0) {
+			k1 = 1.0/Math.sin(baseLatitude);
 			c = k1*k1;
-			y2 = Math.sqrt(c*(1.0-Math.sin(lat/k1))/(1.0+Math.sin(lat/k1)));
+			y2 = Math.sqrt(c*(1.0-Math.sin(baseLatitude/k1))/(1.0+Math.sin(baseLatitude/k1)));
 			for (j = 0; j < Height; j++) {
 				for (i = 0; i < Width ; i++) {
 					x = (2.0*i-Width)/Height/scale;
@@ -1396,7 +1467,7 @@ public class PlanetJ implements IPlanet
 						col[i][j] = BACK;
 						if (doshade) shades[i][j] = 255;
 					} else {
-						theta1 += longi-0.5*PI; /* theta1 is longitude */
+						theta1 += baseLongitude-0.5*PI; /* theta1 is longitude */
 						theta2 = k1*Math.asin((zz-c)/(zz+c));
 						/* theta2 is latitude */
 						if (theta2 > 0.5*PI || theta2 < -0.5*PI) {
@@ -1410,7 +1481,14 @@ public class PlanetJ implements IPlanet
 							double alt = planet1(Math.cos(theta1)*cos2,y,-Math.sin(theta1)*cos2);
 							col[i][j] = alt2color(alt, Math.cos(theta1)*cos2,y,-Math.sin(theta1)*cos2);
 							heights[i][j] = (int)alt;
-							if (doshade) shades[i][j] = shade;
+							if(!doWaterShade && alt<=0.0)
+							{
+								shades[i][j] = waterShade; 
+							}
+							else if(doshade)
+							{
+								shades[i][j] = shade; 
+							}
 						}
 					}
 				}
@@ -1423,8 +1501,8 @@ public class PlanetJ implements IPlanet
 					if (ymin <= y && y <= ymax) {
 						zz = Math.sqrt(c*(1.0+Math.sin(DEG2RAD*theta1/k1))
 								/(1.0-Math.sin(DEG2RAD*theta1/k1)));
-						for (theta2=-PI+longi; theta2<PI+longi; theta2+=0.5/Width/scale) {
-							z1 = theta2-longi;
+						for (theta2=-PI+baseLongitude; theta2<PI+baseLongitude; theta2+=0.5/Width/scale) {
+							z1 = theta2-baseLongitude;
 							x1 = zz*Math.sin(z1/k1);
 							y1 = zz*Math.cos(z1/k1);
 							i = (int) (0.5*(Height*scale*x1+Width));
@@ -1440,9 +1518,9 @@ public class PlanetJ implements IPlanet
 					if (ymin <= y && y <= ymax) {
 						zz = Math.sqrt(c*(1.0+Math.sin(theta1/k1))
 								/(1.0-Math.sin(theta1/k1)));
-						for (theta2 = 0.0; theta2>-180.0+longi/DEG2RAD; theta2-=vgrid);
-						for (theta2 = theta2; theta2<180.0+longi/DEG2RAD; theta2+=vgrid) {
-							z1 = DEG2RAD*theta2-longi;
+						for (theta2 = 0.0; theta2>-180.0+baseLongitude/DEG2RAD; theta2-=vgrid);
+						for (theta2 = theta2; theta2<180.0+baseLongitude/DEG2RAD; theta2+=vgrid) {
+							z1 = DEG2RAD*theta2-baseLongitude;
 							x1 = zz*Math.sin(z1/k1);
 							y1 = zz*Math.cos(z1/k1);
 							i = (int) (0.5*(Height*scale*x1+Width));
@@ -1454,9 +1532,9 @@ public class PlanetJ implements IPlanet
 			}
 		}
 		else {
-			k1 = 1.0/Math.sin(lat);
+			k1 = 1.0/Math.sin(baseLatitude);
 			c = k1*k1;
-			y2 = Math.sqrt(c*(1.0-Math.sin(lat/k1))/(1.0+Math.sin(lat/k1)));
+			y2 = Math.sqrt(c*(1.0-Math.sin(baseLatitude/k1))/(1.0+Math.sin(baseLatitude/k1)));
 			for (j = 0; j < Height; j++) {
 				for (i = 0; i < Width ; i++) {
 					x = (2.0*i-Width)/Height/scale;
@@ -1467,7 +1545,7 @@ public class PlanetJ implements IPlanet
 						col[i][j] = BACK;
 						if (doshade) shades[i][j] = 255;
 					} else {
-						theta1 += longi-0.5*PI; /* theta1 is longitude */
+						theta1 += baseLongitude-0.5*PI; /* theta1 is longitude */
 						theta2 = k1*Math.asin((zz-c)/(zz+c));
 						/* theta2 is latitude */
 						if (theta2 > 0.5*PI || theta2 < -0.5*PI) {
@@ -1494,8 +1572,8 @@ public class PlanetJ implements IPlanet
 					if (ymin <= y && y <= ymax) {
 						zz = Math.sqrt(c*(1.0+Math.sin(DEG2RAD*theta1/k1))
 								/(1.0-Math.sin(DEG2RAD*theta1/k1)));
-						for (theta2=-PI+longi; theta2<PI+longi; theta2+=0.5/Width/scale) {
-							z1 = theta2-longi;
+						for (theta2=-PI+baseLongitude; theta2<PI+baseLongitude; theta2+=0.5/Width/scale) {
+							z1 = theta2-baseLongitude;
 							x1 = -zz*Math.sin(z1/k1);
 							y1 = -zz*Math.cos(z1/k1);
 							i = (int) (0.5*(Height*scale*x1+Width));
@@ -1511,9 +1589,9 @@ public class PlanetJ implements IPlanet
 					if (ymin <= y && y <= ymax) {
 						zz = Math.sqrt(c*(1.0+Math.sin(theta1/k1))
 								/(1.0-Math.sin(theta1/k1)));
-						for (theta2 = 0.0; theta2>-180.0+longi/DEG2RAD; theta2-=vgrid);
-						for (theta2 = theta2; theta2<180.0+longi/DEG2RAD; theta2+=vgrid) {
-							z1 = DEG2RAD*theta2-longi;
+						for (theta2 = 0.0; theta2>-180.0+baseLongitude/DEG2RAD; theta2-=vgrid);
+						for (theta2 = theta2; theta2<180.0+baseLongitude/DEG2RAD; theta2+=vgrid) {
+							z1 = DEG2RAD*theta2-baseLongitude;
 							x1 = -zz*Math.sin(z1/k1);
 							y1 = -zz*Math.cos(z1/k1);
 							i = (int) (0.5*(Height*scale*x1+Width));
@@ -1531,7 +1609,7 @@ public class PlanetJ implements IPlanet
 		double y,scale1,theta1,cos2;
 		int k,i,j;
 
-		k = (int)(lat*Width*scale/PI);
+		k = (int)(baseLatitude*Width*scale/PI);
 		for (j = 0; j < Height; j++) {
 			y = (2.0*(j-k)-Height)/Width/scale*PI;
 			if (Math.abs(y)>=0.5*PI) for (i = 0; i < Width ; i++) {
@@ -1543,11 +1621,18 @@ public class PlanetJ implements IPlanet
 					scale1 = scale*Width/Height/cos2/PI;
 					Depth = 3*((int)(log_2(scale1*Height)))+3;
 					for (i = 0; i < Width ; i++) {
-						theta1 = longi-0.5*PI+PI*(2.0*i-Width)/Width/scale;
+						theta1 = baseLongitude-0.5*PI+PI*(2.0*i-Width)/Width/scale;
 						double alt = planet1(Math.cos(theta1)*cos2,Math.sin(y),-Math.sin(theta1)*cos2);
 						col[i][j] = alt2color(alt, Math.cos(theta1)*cos2,Math.sin(y),-Math.sin(theta1)*cos2);
 						heights[i][j] = (int)alt;
-						if (doshade) shades[i][j] = shade;
+						if(!doWaterShade && alt<=0.0)
+						{
+							shades[i][j] = waterShade; 
+						}
+						else if(doshade)
+						{
+							shades[i][j] = shade; 
+						}
 					}
 				}
 			}
@@ -1564,7 +1649,7 @@ public class PlanetJ implements IPlanet
 		if (vgrid != 0.0) { /* draw vertical gridlines */
 			for (theta1 = 0.0; theta1>-360.0; theta1-=vgrid);
 			for (theta1 = theta1; theta1<360.0; theta1+=vgrid) {
-				i = (int)(0.5*Width*(1.0+scale*(DEG2RAD*theta1-longi)/PI));
+				i = (int)(0.5*Width*(1.0+scale*(DEG2RAD*theta1-baseLongitude)/PI));
 				if (i>=0 && i<Width)
 					for (j = max(0,Height/2-(int)(0.25*PI*Width*scale/PI)+k);
 					j < min(Height,Height/2+(int)(0.25*PI*Width*scale/PI)+k); j++)
@@ -1575,18 +1660,170 @@ public class PlanetJ implements IPlanet
 
 	public void save() 
 	{
-		if(!filename.equals("false"))
+		if(filename!=null && !filename.equals("false"))
 		{
 			save(filename);
 		}
-		if(!world_file.equals("false"))
+		if(world_file!=null && !world_file.equals("false"))
 		{
 			saveWLD(world_file);
 		}
-		if(!ter_file.equals("false"))
+		if(ter_file!=null && !ter_file.equals("false"))
 		{
 			saveTERRAGEN(ter_file);
 		}
+	}
+
+	public double getScale() {
+		return scale;
+	}
+
+	public void setScale(double scale) {
+		this.scale = scale;
+	}
+
+	public boolean isDoshade() {
+		return doshade;
+	}
+
+	public void setDoshade(boolean doshade) {
+		this.doshade = doshade;
+	}
+
+	public int getWidth() {
+		return Width;
+	}
+
+	public void setWidth(int width) {
+		Width = width;
+	}
+	
+	public double getSeed() {
+		return rseed;
+	}
+
+	public void setSeed(double s) {
+		rseed = s;
+	}
+
+	public int getHeight() {
+		return Height;
+	}
+
+	public void setHeight(int height) {
+		Height = height;
+	}
+
+	public String getFilename() {
+		return filename;
+	}
+
+	public void setFilename(String filename) {
+		this.filename = filename;
+	}
+
+	public double getInitialAltitude() {
+		return initialAltitude;
+	}
+
+	public void setInitialAltitude(double initialAltitude) {
+		this.initialAltitude = initialAltitude;
+	}
+
+	public double getAltitudeWeight() {
+		return altitudeWeight;
+	}
+
+	public void setAltitudeWeight(double altitudeWeight) {
+		this.altitudeWeight = altitudeWeight;
+	}
+
+	public double getDistanceWeight() {
+		return distanceWeight;
+	}
+
+	public void setDistanceWeight(double distanceWeight) {
+		this.distanceWeight = distanceWeight;
+	}
+
+	public boolean isUseAlternativeColors() {
+		return useAlternativeColors;
+	}
+
+	public void setUseAlternativeColors(boolean useAlternativeColors) {
+		this.useAlternativeColors = useAlternativeColors;
+	}
+
+	public double getBaseLongitude() {
+		return baseLongitude;
+	}
+
+	public void setBaseLongitude(double baseLongitude) {
+		this.baseLongitude = baseLongitude;
+	}
+
+	public double getBaseLatitude() {
+		return baseLatitude;
+	}
+
+	public void setBaseLatitude(double baseLatitude) {
+		this.baseLatitude = baseLatitude;
+	}
+
+	public double getVgrid() {
+		return vgrid;
+	}
+
+	public void setVgrid(double vgrid) {
+		this.vgrid = vgrid;
+	}
+
+	public double getHgrid() {
+		return hgrid;
+	}
+
+	public void setHgrid(double hgrid) {
+		this.hgrid = hgrid;
+	}
+
+	public char getView() {
+		return view;
+	}
+
+	public void setView(char view) {
+		this.view = view;
+	}
+
+	public boolean isDoWaterShade() {
+		return doWaterShade;
+	}
+
+	public void setDoWaterShade(boolean doWaterShade) {
+		this.doWaterShade = doWaterShade;
+	}
+
+	public int getWaterShade() {
+		return waterShade;
+	}
+
+	public void setWaterShade(int waterShade) {
+		this.waterShade = waterShade;
+	}
+
+	public boolean isLatitudeColors() {
+		return latitudeColors;
+	}
+
+	public void setLatitudeColors(boolean latitudeColors) {
+		this.latitudeColors = latitudeColors;
+	}
+
+	public double getShadeAngle() {
+		return shadeAngle;
+	}
+
+	public void setShadeAngle(double shadeAngle) {
+		this.shadeAngle = shadeAngle;
 	}
 		
 }
